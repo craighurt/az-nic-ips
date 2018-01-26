@@ -57,7 +57,7 @@ func getVMNic(vmClient compute.VirtualMachinesClient, nicClient network.Interfac
 	return &nic, nil
 }
 
-func addIPtoVMNic(nicClient network.InterfacesClient, nic network.Interface, groupName string) (err error) {
+func addIPstoVMNic(nicClient network.InterfacesClient, nic network.Interface, groupName string, count int) (err error) {
 	newidx := 0
 	var primarySubnet network.Subnet
 
@@ -78,19 +78,20 @@ func addIPtoVMNic(nicClient network.InterfacesClient, nic network.Interface, gro
 			primarySubnet = *(*ipconfig.InterfaceIPConfigurationPropertiesFormat).Subnet
 		}
 	}
-	newidx = newidx + 1
-	newIPCfgName := fmt.Sprintf("ipconfig%d", newidx)
-	fmt.Println("New ipcfg name: ", newIPCfgName)
+	for i := 0; i < count; i++ {
+		newidx = newidx + 1
+		newIPCfgName := fmt.Sprintf("ipconfig%d", newidx)
+		fmt.Println("New ipcfg name: ", newIPCfgName)
+		newIPCfg := network.InterfaceIPConfiguration{
+			Name: &newIPCfgName,
+			InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{
+				PrivateIPAllocationMethod: network.Dynamic,
+				Subnet: &primarySubnet,
+			},
+		}
 
-	newIPCfg := network.InterfaceIPConfiguration{
-		Name: &newIPCfgName,
-		InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{
-			PrivateIPAllocationMethod: network.Dynamic,
-			Subnet: &primarySubnet,
-		},
+		*nic.InterfacePropertiesFormat.IPConfigurations = append(*nic.InterfacePropertiesFormat.IPConfigurations, newIPCfg)
 	}
-
-	*nic.InterfacePropertiesFormat.IPConfigurations = append(*nic.InterfacePropertiesFormat.IPConfigurations, newIPCfg)
 
 	_, err = nicClient.CreateOrUpdate(groupName, *nic.Name, nic, nil)
 	fmt.Println("Waiting to update NIC ....")
