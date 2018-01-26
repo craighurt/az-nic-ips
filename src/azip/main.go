@@ -29,10 +29,10 @@ func main() {
 		"AZURE_SUBSCRIPTION_ID": os.Getenv("ACCOUNT_ID"),
 		"AZURE_TENANT_ID":       os.Getenv("TENANT_ID"),
 		"AZURE_GROUP_NAME":      os.Getenv("GROUP_NAME"),
-		"AZURE_VM_NAME":		 os.Getenv("VM_NAME"),
+		"AZURE_VM_NAME":         os.Getenv("VM_NAME"),
 	}
 	nicClient, vmClient := initClients(env)
-	
+
 	nic, err := getVMNic(vmClient, nicClient, env["AZURE_GROUP_NAME"], env["AZURE_VM_NAME"])
 	if err != nil {
 		os.Exit(1)
