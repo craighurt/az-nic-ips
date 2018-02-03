@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/BurntSushi/toml"
 	"os"
 	"strconv"
 )
@@ -31,17 +30,19 @@ type AzureConfig struct {
 }
 
 func main() {
+	/*
 	var config AzureConfig
 	if _, err := toml.DecodeFile("/run/secrets/azure_ucp_admin.toml", &config); err != nil {
 		fmt.Printf("Error decoding file %v", err)
 		return
 	}
+	*/
 
 	env := map[string]string{
-		"AZURE_CLIENT_ID":       config.AzureClientID,
-		"AZURE_CLIENT_SECRET":   config.AzureClientSecret,
-		"AZURE_SUBSCRIPTION_ID": config.AzureSubscriptionID,
-		"AZURE_TENANT_ID":       config.AzureTenantID,
+		"AZURE_CLIENT_ID":       os.Getenv("APP_ID"),
+		"AZURE_CLIENT_SECRET":   os.Getenv("APP_SECRET"),
+		"AZURE_SUBSCRIPTION_ID": os.Getenv("ACCOUNT_ID"),
+		"AZURE_TENANT_ID":       os.Getenv("TENANT_ID"),
 		"AZURE_GROUP_NAME":      os.Getenv("GROUP_NAME"),
 		"AZURE_VM_NAME":         os.Getenv("VM_NAME"),
 		"IP_COUNT":              os.Getenv("IP_COUNT"),
