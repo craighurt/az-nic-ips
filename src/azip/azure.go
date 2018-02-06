@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/arm/compute"
-	"github.com/Azure/azure-sdk-for-go/arm/examples/helpers"
 	"github.com/Azure/azure-sdk-for-go/arm/network"
+	"github.com/Azure/azure-sdk-for-go/arm/examples/helpers"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
@@ -40,7 +40,7 @@ func backoffExp(f func() error, errPre string) error {
 	return fmt.Errorf("Timeout reached")
 }
 
-func initClients(env map[string]string) (network.InterfacesClient, compute.VirtualMachinesClient) {
+func initClients(env map[string]string) (network.InterfacesClient, compute.VirtualMachinesClient, compute.VirtualMachineScaleSetsClient, compute.VirtualMachineScaleSetVMsClient) {
 	rmEndpoint := azure.PublicCloud.ResourceManagerEndpoint
 	// handle other endpoints like Azure Gov/China/etc
 	if uri := os.Getenv("RESOURCE_MANAGER_ENDPOINT"); uri != "" {
@@ -49,7 +49,7 @@ func initClients(env map[string]string) (network.InterfacesClient, compute.Virtu
 
 	spt, err := helpers.NewServicePrincipalTokenFromCredentials(env, rmEndpoint)
 	if err != nil {
-		fmt.Printf("ERROR: Getting SP token - check that all ENV variables are set")
+		fmt.Println("Error getting SP token: ", err)
 		os.Exit(1)
 	}
 
@@ -59,9 +59,83 @@ func initClients(env map[string]string) (network.InterfacesClient, compute.Virtu
 	// Create VM Client
 	vmClient := compute.NewVirtualMachinesClientWithBaseURI(rmEndpoint, env["AZURE_SUBSCRIPTION_ID"])
 	vmClient.Authorizer = spt
-
-	return nicClient, vmClient
+	// Create VMSS Client
+	vmssClient := compute.NewVirtualMachineScaleSetsClientWithBaseURI(rmEndpoint, env["AZURE_SUBSCRIPTION_ID"])
+	vmssClient.Authorizer = spt
+	// Create VMSS VM Client
+	vmssVMClient := compute.NewVirtualMachineScaleSetVMsClientWithBaseURI(rmEndpoint, env["AZURE_SUBSCRIPTION_ID"])
+	vmssVMClient.Authorizer = spt	
+	return nicClient, vmClient, vmssClient, vmssVMClient
 }
+
+func getVMSSNic(vmssClient compute.VirtualMachineScaleSetsClient, vmssVMClient compute.VirtualMachineScaleSetVMsClient, nicClient network.InterfacesClient, groupName, vmName string) (*network.Interface, error) {
+	var vmssList compute.VirtualMachineScaleSetListResult
+	var err error
+
+	err = backoffExp(func() error {
+		vmssList, err = vmssClient.List(groupName)
+		return err
+	}, "Error getting VMSS list: ")
+	if err != nil {
+		return nil, err
+	}
+
+	for (vmssList.Value != nil && len(*vmssList.Value) > 0) {
+		// process list of vmss in current page of results
+		for _, vmss := range *vmssList.Value {
+			// expected format of vm names part of vmss: vmss_name-i
+			fmt.Println("VMSS name: ", *vmss.Name)
+			if !strings.HasPrefix(vmName, *vmss.Name) {
+				continue
+			}
+			
+			var vmssVMList compute.VirtualMachineScaleSetVMListResult
+			err = backoffExp(func() error {
+				vmssVMList, err = vmssVMClient.List(groupName, *vmss.Name, "", "", "")
+				return err
+			}, "Error getting VMSS VM list: ")
+			if err != nil {
+				return nil, err
+			}
+			// locate VM within VMSS results
+			for (vmssVMList.Value != nil && len(*vmssVMList.Value) > 0) {
+				for _, vmssVM := range *vmssVMList.Value {
+					fmt.Println("VMSS VM name: ", *vmssVM.Name)
+					if vmName == *vmssVM.Name {
+						nicID := *(*vmssVM.VirtualMachineScaleSetVMProperties.NetworkProfile.NetworkInterfaces)[0].ID
+						nicName := path.Base(nicID)
+						var nic network.Interface
+						err = backoffExp(func() error {
+							nic, err = nicClient.Get(groupName, nicName, "")
+							return err
+						}, "Error getting NIC details: ")
+						if err != nil {
+							return nil, err
+						}
+						return &nic, nil
+					}
+				}
+				err = backoffExp(func() error {
+					vmssVMList, err = vmssVMClient.ListNextResults(vmssVMList)
+					return err
+				}, "Error getting VMSS VM list: ")
+				if err != nil {
+					return nil, err
+				}	
+			}
+		}
+		// advance to next page of results
+		err = backoffExp(func() error {
+			vmssList, err = vmssClient.ListNextResults(vmssList)
+			return err
+		}, "Error getting VMSS list: ")
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil 
+}
+
 
 func getVMNic(vmClient compute.VirtualMachinesClient, nicClient network.InterfacesClient, groupName, vmName string) (*network.Interface, error) {
 	var vm compute.VirtualMachine

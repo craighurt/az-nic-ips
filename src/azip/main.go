@@ -47,9 +47,9 @@ func main() {
 		"AZURE_VM_NAME":         os.Getenv("VM_NAME"),
 		"IP_COUNT":              os.Getenv("IP_COUNT"),
 	}
-	nicClient, vmClient := initClients(env)
+	nicClient, _, vmssClient, vmssVMClient := initClients(env)
 
-	nic, err := getVMNic(vmClient, nicClient, env["AZURE_GROUP_NAME"], env["AZURE_VM_NAME"])
+	nic, err := getVMSSNic(vmssClient, vmssVMClient, nicClient, env["AZURE_GROUP_NAME"], env["AZURE_VM_NAME"])
 	if err != nil {
 		os.Exit(1)
 	}
@@ -58,6 +58,10 @@ func main() {
 	if err != nil {
 		fmt.Println("Invalid IP_COUNT specified")
 		os.Exit(1)
+	}
+	if nic == nil {
+		fmt.Printf("NIC for VM %s could not be located\n", env["AZURE_VM_NAME"])
+		os.Exit(1)		
 	}
 	err = addIPstoVMNic(nicClient, *nic, env["AZURE_GROUP_NAME"], ips)
 
