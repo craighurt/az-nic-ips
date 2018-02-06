@@ -33,7 +33,7 @@ type AzureConfig struct {
 func main() {
 	var config AzureConfig
 	if _, err := toml.DecodeFile("/run/secrets/azure_ucp_admin.toml", &config); err != nil {
-		fmt.Printf("Error decoding file %v", err)
+		fmt.Printf("ERROR: could not decode secrets file %v", err)
 		return
 	}
 
@@ -55,7 +55,7 @@ func main() {
 
 	ips, err := strconv.Atoi(env["IP_COUNT"])
 	if err != nil {
-		fmt.Println("Invalid IP_COUNT specified")
+		fmt.Println("ERROR: Invalid IP_COUNT specified")
 		os.Exit(1)
 	}
 	err = addIPstoVMNic(nicClient, *nic, env["AZURE_GROUP_NAME"], ips)
