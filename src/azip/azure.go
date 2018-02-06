@@ -124,8 +124,9 @@ func addIPstoVMNic(nicClient network.InterfacesClient, nic network.Interface, gr
 		name := *ipconfig.Name
 		fmt.Println("ipconfig name: ", name)
 
-		if strings.HasPrefix(name, "ipconfig") {
-			if idx, err := strconv.Atoi(strings.TrimPrefix(name, "ipconfig")); err == nil {
+		if strings.HasPrefix(name, k8ipprefix) {
+			if idx, err := strconv.Atoi(strings.TrimPrefix(name, k8ipprefix)); err == nil {
+				existingIPs = existingIPs + 1
 				if idx > newidx {
 					fmt.Println("setting new index to: ", idx)
 					newidx = idx
@@ -150,7 +151,7 @@ func addIPstoVMNic(nicClient network.InterfacesClient, nic network.Interface, gr
 	count = count - existingIPs
 	for i := 0; i < count; i++ {
 		newidx = newidx + 1
-		newIPCfgName := fmt.Sprintf("ipconfig%d", newidx)
+		newIPCfgName := fmt.Sprintf("%s%d", k8ipprefix, newidx)
 		fmt.Println("New ipcfg name: ", newIPCfgName)
 		newIPCfg := network.InterfaceIPConfiguration{
 			Name: &newIPCfgName,
