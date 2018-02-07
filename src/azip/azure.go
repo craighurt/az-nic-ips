@@ -22,6 +22,7 @@ const (
 	waitRand    = 10   // random addition to wait time
 
 	k8ipprefix = "k8ip"
+	skipVMtag  = "k8skipIP"
 )
 
 func backoffExp(f func() error, errPre string) error {
@@ -63,15 +64,30 @@ func initClients(env map[string]string) (network.InterfacesClient, compute.Virtu
 	return nicClient, vmClient
 }
 
-func getVMNic(vmClient compute.VirtualMachinesClient, nicClient network.InterfacesClient, groupName, vmName string) (*network.Interface, error) {
-	var nic network.Interface
+func skipVM(vm compute.VirtualMachine) bool {
+	if vm.Tags == nil {
+		return false
+	}
+	if _, ok := (*vm.Tags)[skipVMtag]; ok {
+		fmt.Println("Tag found on VM: ", skipVMtag)
+		return true
+	}
+	return false
+}
+
+func getVM(vmClient compute.VirtualMachinesClient, vmName, groupName string) (*compute.VirtualMachine, error) {
 	vm, err := vmClient.Get(groupName, vmName, compute.InstanceView)
 	if err != nil {
 		fmt.Println("ERROR: failed to get VM details: ", err.Error())
 		return nil, err
 	}
-	fmt.Println("Obtained VM ID: ", *vm.ID)
+	fmt.Println("Found VM: ", *vm.ID)
+	return &vm, nil
+}
 
+func getNIC(nicClient network.InterfacesClient, vm compute.VirtualMachine, groupName string) (*network.Interface, error) {
+	var nic network.Interface
+	var err error
 	nicInterfaces := *vm.VirtualMachineProperties.NetworkProfile.NetworkInterfaces
 	nicCount := len(nicInterfaces)
 	if nicCount < 1 {
@@ -122,13 +138,10 @@ func addIPstoVMNic(nicClient network.InterfacesClient, nic network.Interface, gr
 
 	for _, ipconfig := range *nic.InterfacePropertiesFormat.IPConfigurations {
 		name := *ipconfig.Name
-		fmt.Println("ipconfig name: ", name)
-
 		if strings.HasPrefix(name, k8ipprefix) {
 			if idx, err := strconv.Atoi(strings.TrimPrefix(name, k8ipprefix)); err == nil {
 				existingIPs = existingIPs + 1
 				if idx > newidx {
-					fmt.Println("setting new index to: ", idx)
 					newidx = idx
 				}
 			}
@@ -152,7 +165,7 @@ func addIPstoVMNic(nicClient network.InterfacesClient, nic network.Interface, gr
 	for i := 0; i < count; i++ {
 		newidx = newidx + 1
 		newIPCfgName := fmt.Sprintf("%s%d", k8ipprefix, newidx)
-		fmt.Println("New ipcfg name: ", newIPCfgName)
+		fmt.Println("Add new ipcfg ", newIPCfgName)
 		newIPCfg := network.InterfaceIPConfiguration{
 			Name: &newIPCfgName,
 			InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{

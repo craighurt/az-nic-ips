@@ -32,7 +32,6 @@ type AzureConfig struct {
 }
 
 func main() {
-
 	var config AzureConfig
 	if _, err := toml.DecodeFile("/run/secrets/azure_ucp_admin.toml", &config); err != nil {
 		fmt.Printf("ERROR: could not decode secrets file %v", err)
@@ -50,8 +49,18 @@ func main() {
 	}
 	nicClient, vmClient := initClients(env)
 
-	nic, err := getVMNic(vmClient, nicClient, env["AZURE_GROUP_NAME"], env["AZURE_VM_NAME"])
-	if err != nil {
+	vm, err := getVM(vmClient, env["AZURE_VM_NAME"], env["AZURE_GROUP_NAME"])
+	if vm == nil || err != nil {
+		os.Exit(1)
+	}
+
+	if skipVM(*vm) {
+		fmt.Println("Skipping VM")
+		os.Exit(0)
+	}
+
+	nic, err := getNIC(nicClient, *vm, env["AZURE_GROUP_NAME"])
+	if nic == nil || err != nil {
 		os.Exit(1)
 	}
 
@@ -60,6 +69,10 @@ func main() {
 		fmt.Println("ERROR: Invalid IP_COUNT specified")
 		os.Exit(1)
 	}
-	err = addIPstoVMNic(nicClient, *nic, env["AZURE_GROUP_NAME"], ips)
 
+	err = addIPstoVMNic(nicClient, *nic, env["AZURE_GROUP_NAME"], ips)
+	if err != nil {
+		fmt.Println("ERROR: failed to add IPs to VM")
+		os.Exit(1)
+	}
 }
