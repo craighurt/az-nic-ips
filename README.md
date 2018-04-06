@@ -5,7 +5,7 @@
 [![Badge Badge](http://doyouevenbadge.com/github.com/ddebroy/az-nic-ips)](http://doyouevenbadge.com)
 
 # AZ NIC IPs
-tool to add IPs to NICs in Azure VMs
+A Tool to add multiple IPs to NICs in Azure VMs
 
 To build the binary, simply run `make`.
 
