@@ -1,5 +1,5 @@
 
-[![GoDoc](https://godoc.org/github.com/ddebroy/az-nic-ips?status.svg)](https://godoc.org/github.com/ddebroy/az-nic-ips)
+[![GoDoc](https://godoc.org/github.com/ddebroy/az-nic-ips/src/azip?status.svg)](https://godoc.org/github.com/ddebroy/az-nic-ips/src/azip)
 [![TravisCI](https://travis-ci.org/ddebroy/az-nic-ips.svg?branch=master)](https://travis-ci.org/ddebroy/az-nic-ips)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ddebroy/az-nic-ips)](https://goreportcard.com/report/github.com/ddebroy/az-nic-ips)
 [![Badge Badge](http://doyouevenbadge.com/github.com/ddebroy/az-nic-ips)](http://doyouevenbadge.com)
