@@ -1,0 +1,7 @@
+language: go
+
+script:
+- go get github.com/LK4D4/vndr
+- cd src/azip
+- vndr
+- go test ./...
