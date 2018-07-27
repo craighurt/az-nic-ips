@@ -22,24 +22,24 @@ You should see a new IP added to the first NIC of VM with VM_NAME
 
 ## Deploy as a Docker service
 
-1. Create a `azure_ucp_admin.toml` file with the following information:
+1. Create a `azure_ucp_admin.json` file with the following information:
 ```
-AZURE_CLIENT_ID = "<AD App ID >"
-AZURE_TENANT_ID = "<AD Tenant ID >"
-AZURE_SUBSCRIPTION_ID = "<Azure subscription ID>"
-AZURE_CLIENT_SECRET = "<AD App Secret >"
+aadClientId = "<AD App ID >"
+tenantId = "<AD Tenant ID >"
+subscriptionId = "<Azure subscription ID>"
+aadClientSecret = "<AD App Secret >"
 ```
 
 2. Create a Docker Swarm secret based on the "azure_ucp_admin.toml" file
 ```
-docker secret create azure_ucp_admin.toml azure_ucp_admin.toml
+docker secret create azure_ucp_admin.json azure_ucp_admin.json
 ```
 
 3. Create a global swarm service using this image
 ```
 docker service create \
   --mode=global \
-  --secret=azure_ucp_admin.toml \
+  --secret=azure_ucp_admin.json \
   --log-driver json-file \
   --log-opt max-size=1m \
   --env IPCOUNT=128 \
