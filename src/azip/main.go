@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
-
-	"github.com/BurntSushi/toml"
 )
 
 func validate() {
@@ -25,15 +25,20 @@ func checkEnvVars(envVars ...string) bool {
 }
 
 type AzureConfig struct {
-	AzureClientID       string `toml:"AZURE_CLIENT_ID"`
-	AzureTenantID       string `toml:"AZURE_TENANT_ID"`
-	AzureSubscriptionID string `toml:"AZURE_SUBSCRIPTION_ID"`
-	AzureClientSecret   string `toml:"AZURE_CLIENT_SECRET"`
+	AzureClientID       string `json:"aadClientId"`
+	AzureTenantID       string `json:"tenantId"`
+	AzureSubscriptionID string `json:"subscriptionId"`
+	AzureClientSecret   string `json:"aadClientSecret"`
 }
 
 func main() {
 	var config AzureConfig
-	if _, err := toml.DecodeFile("/run/secrets/azure_ucp_admin.toml", &config); err != nil {
+	file, err := ioutil.ReadFile("/run/secrets/azure_ucp_admin.json")
+	if err != nil {
+		fmt.Printf("ERROR: failed to read file: %v\n", err)
+		return
+	}
+	if err := json.Unmarshal(file, &config); err != nil {
 		fmt.Printf("ERROR: could not decode secrets file %v", err)
 		return
 	}
