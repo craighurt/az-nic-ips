@@ -12,7 +12,7 @@ RUN vndr
 RUN go vet
 RUN go install
 
-FROM alpine:3.5 as deploy
+FROM alpine:3.8 as deploy
 
 RUN apk add --update bash ca-certificates jq curl && rm -Rf /tmp/* /var/lib/cache/apk/*
 
