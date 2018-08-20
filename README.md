@@ -42,7 +42,7 @@ docker service create \
   --secret=azure_ucp_admin.json \
   --log-driver json-file \
   --log-opt max-size=1m \
-  --env IPCOUNT=128 \
+  --env IP_COUNT=128 \
   --name ipallocator \
   docker4x/az-nic-ips:latest
 ```
