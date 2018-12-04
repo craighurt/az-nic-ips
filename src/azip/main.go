@@ -29,6 +29,7 @@ type AzureConfig struct {
 	AzureTenantID       string `json:"tenantId"`
 	AzureSubscriptionID string `json:"subscriptionId"`
 	AzureClientSecret   string `json:"aadClientSecret"`
+	AzureCloudName      string `json:"cloud"`
 }
 
 func main() {
@@ -44,6 +45,7 @@ func main() {
 	}
 
 	env := map[string]string{
+		"AZURE_CLOUD_NAME":      config.AzureCloudName,
 		"AZURE_CLIENT_ID":       config.AzureClientID,
 		"AZURE_CLIENT_SECRET":   config.AzureClientSecret,
 		"AZURE_SUBSCRIPTION_ID": config.AzureSubscriptionID,

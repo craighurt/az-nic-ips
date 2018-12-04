@@ -42,11 +42,12 @@ func backoffExp(f func() error, errPre string) error {
 }
 
 func initClients(env map[string]string) (network.InterfacesClient, compute.VirtualMachinesClient) {
-	rmEndpoint := azure.PublicCloud.ResourceManagerEndpoint
-	// handle other endpoints like Azure Gov/China/etc
-	if uri := os.Getenv("RESOURCE_MANAGER_ENDPOINT"); uri != "" {
-		rmEndpoint = uri
+	azEnvironment, err := azure.EnvironmentFromName(env["AZURE_CLOUD_NAME"])
+	if err != nil {
+		fmt.Printf("ERROR: %s", err.Error())
+		os.Exit(1)
 	}
+	rmEndpoint := azEnvironment.ResourceManagerEndpoint
 
 	spt, err := helpers.NewServicePrincipalTokenFromCredentials(env, rmEndpoint)
 	if err != nil {
