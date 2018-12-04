@@ -23,6 +23,7 @@ const (
 
 	k8ipprefix = "k8ip"
 	skipVMtag  = "k8skipIP"
+	podNICtag  = "PodNIC"
 )
 
 func backoffExp(f func() error, errPre string) error {
@@ -119,14 +120,15 @@ func getNIC(nicClient network.InterfacesClient, vm compute.VirtualMachine, group
 			if err != nil {
 				return nil, err
 			}
-			if (nic.InterfacePropertiesFormat == nil) || ((*nic.InterfacePropertiesFormat).Primary == nil) {
+			if nic.Tags == nil {
 				continue
 			}
-			if *(*nic.InterfacePropertiesFormat).Primary {
+			if _, ok := (*nic.Tags)[podNICtag]; ok {
+				fmt.Println("Pod NIC found: ", nicName)
 				return &nic, nil
 			}
 		}
-		return nil, fmt.Errorf("ERROR: no primary NIC found")
+		return nil, fmt.Errorf("ERROR: no NIC with tag %s found", podNICtag)
 	}
 	return nil, fmt.Errorf("ERROR: No NIC found for k8 usage")
 }
