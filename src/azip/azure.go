@@ -43,10 +43,26 @@ func backoffExp(f func() error, errPre string) error {
 }
 
 func initClients(env map[string]string) (network.InterfacesClient, compute.VirtualMachinesClient) {
-	rmEndpoint := azure.PublicCloud.ResourceManagerEndpoint
-	// handle other endpoints like Azure Gov/China/etc
+	var rmEndpoint string
+	if env["AZURE_CLOUD_NAME"] == "" {
+		// If the 'cloud' field isn't set in /etc/kubernetes/azure.json, default to the Public Cloud endpoint
+		rmEndpoint = azure.PublicCloud.ResourceManagerEndpoint
+		fmt.Printf("'cloud' field not set in /etc/kubernetes/azure.json, defaulting to %s", rmEndpoint)
+	} else {
+		// If it's set, use that to get the correct endpoint for that region / environment
+		azEnvironment, err := azure.EnvironmentFromName(env["AZURE_CLOUD_NAME"])
+		if err != nil {
+			fmt.Printf("ERROR: %s", err.Error())
+			os.Exit(1)
+		}
+		rmEndpoint = azEnvironment.ResourceManagerEndpoint
+		fmt.Printf("Cloud determined from /etc/kubernetes/azure.json, using %s", rmEndpoint)
+	}
+
+	// Allow an override in either case
 	if uri := os.Getenv("RESOURCE_MANAGER_ENDPOINT"); uri != "" {
 		rmEndpoint = uri
+		fmt.Printf("Resource manager endpoint read from RESOURCE_MANAGER_ENDPOINT: %s", rmEndpoint)
 	}
 
 	spt, err := helpers.NewServicePrincipalTokenFromCredentials(env, rmEndpoint)
