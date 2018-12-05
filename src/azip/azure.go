@@ -23,6 +23,7 @@ const (
 
 	k8ipprefix = "k8ip"
 	skipVMtag  = "k8skipIP"
+	podNICtag  = "PodNIC"
 )
 
 func backoffExp(f func() error, errPre string) error {
@@ -108,7 +109,9 @@ func getNIC(nicClient network.InterfacesClient, vm compute.VirtualMachine, group
 		return &nic, nil
 	}
 	if nicCount > 1 {
-		// more than one NIC found. Look for the primary one
+		// More than one NIC found. If there is a tagged NIC, use that. If not, use the primary NIC.
+		var primaryNic *network.Interface
+		var taggedNics []*network.Interface
 		for _, nicRef := range *vm.VirtualMachineProperties.NetworkProfile.NetworkInterfaces {
 			nicID := *nicRef.ID
 			nicName := path.Base(nicID)
@@ -119,14 +122,35 @@ func getNIC(nicClient network.InterfacesClient, vm compute.VirtualMachine, group
 			if err != nil {
 				return nil, err
 			}
-			if (nic.InterfacePropertiesFormat == nil) || ((*nic.InterfacePropertiesFormat).Primary == nil) {
-				continue
+
+			if nic.InterfacePropertiesFormat != nil {
+				if *(*nic.InterfacePropertiesFormat).Primary {
+					primaryNic = &nic
+					fmt.Println("Primary NIC found: ", nicName)
+				}
 			}
-			if *(*nic.InterfacePropertiesFormat).Primary {
-				return &nic, nil
+
+			if nic.Tags != nil {
+				if _, ok := (*nic.Tags)[podNICtag]; ok {
+					taggedNics = append(taggedNics, &nic)
+					fmt.Println("Tagged Pod NIC found: ", nicName)
+				}
 			}
 		}
-		return nil, fmt.Errorf("ERROR: no primary NIC found")
+
+		if len(taggedNics) == 1 {
+			fmt.Println("Using tagged NIC")
+			return taggedNics[0], nil
+		}
+
+		if len(taggedNics) > 1 {
+			return nil, fmt.Errorf("ERROR: Multiple tagged NICs found, ensure only one NIC has the '%s' tag", podNICtag)
+		}
+
+		if primaryNic != nil {
+			fmt.Println("Using primary NIC")
+			return primaryNic, nil
+		}
 	}
 	return nil, fmt.Errorf("ERROR: No NIC found for k8 usage")
 }

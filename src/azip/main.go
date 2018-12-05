@@ -66,6 +66,7 @@ func main() {
 
 	nic, err := getNIC(nicClient, *vm, env["AZURE_GROUP_NAME"])
 	if nic == nil || err != nil {
+		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
