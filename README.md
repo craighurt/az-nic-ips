@@ -46,3 +46,21 @@ docker service create \
   --name ipallocator \
   docker4x/az-nic-ips:latest
 ```
+
+## Additional Configuration Options
+
+### Azure Cloud Region
+
+By default (as deployed with Docker EE 3.1.0 >) the service will read the `cloud` attribute (e.g. `AzureChinaCloud`, `AzureGovCloud`) from `/etc/kubernetes/azure.json` and determine the correct Resource Manager Endpoint. If the attribute is not present, the default of `AzurePublicCloud` will be used. It is possible to manually override that behavior in either case by passing the `RESOURCE_MANAGER_ENDPOINT` environment variable to the container / service.
+
+> **Note:** `RESOURCE_MANAGER_ENDPOINT` must be set directly to the _URL_ of the endpoint, not the name of the Cloud. To find the correct URL for the desired region consult the Microsoft Azure documentation.
+
+### Skipping IP Allocation
+
+It is possible to skip allocating IP addresses to a particular VM by applying a tag with the name `k8skipIP` to the VM (the value does not matter).
+
+### NIC Selection
+
+It is possible to select the NIC that that IP addresses are allocated to. This is achieved by applying a tag with the name `PodNIC` to the Network Interface (the value does not matter). If there is a single NIC with that tag, it will be used. If no NIC with that tag exists, the service will instead look for the Primary NIC and allocate to that. 
+
+> **Note:** Specifying multiple NICs for a single VM with the tag `PodNIC` is not allowed and will error. The service will also error if no suitable NICs can be found.
